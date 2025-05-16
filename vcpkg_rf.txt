@@ -1,0 +1,4 @@
+install
+fmt
+sdl3
+sdl3-ttf
