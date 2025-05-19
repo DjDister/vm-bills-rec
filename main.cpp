@@ -73,14 +73,26 @@ struct Template {
   vector<string> fileNames;
 };
 
-vector<Template> number_templates = vector<Template>{
-    {0, "zero", {"0_template1.png", "0_template2.png"}},
-
-    {2, "two", {"2_template1.png"}},
-
+struct FoundNumber {
+  int value;
+  Point location;
+  float distanceFromLeftTopCorner;
 };
 
-float templateMatchThreshold = 0.6;
+bool compareDistances(FoundNumber a, FoundNumber b) {
+  return a.distanceFromLeftTopCorner < b.distanceFromLeftTopCorner;
+};
+
+vector<Template> number_templates = vector<Template>{
+    {0, "zero", {"0_template1.png", "0_template2.png", "0_template3.png"}},
+    {1, "one", {"1_template1.png"}},
+    {2, "two", {"2_template1.png", "2_template2.png"}},
+
+    {5, "one", {"5_template1.png"}},
+};
+
+float templateMatchThreshold = 0.74;
+int distanceBetweenNumbersToMerge = 50;
 
 int main(int argc, char *argv[]) {
   cout << "Hello, World!" << endl;
@@ -122,7 +134,14 @@ int main(int argc, char *argv[]) {
 
   Mat baseImg = img.clone();
 
+  vector<FoundNumber> found_numbers;
+
   for (int i = 0; i < number_templates.size(); ++i) {
+
+    vector<Point> unique_points;
+
+    int min_distance_between_points = 10;
+
     for (int j = 0; j < number_templates[i].fileNames.size(); ++j) {
       string template_path = samples::findFile(
           "./assets/images/templates/" + to_string(number_templates[i].value) +
@@ -143,16 +162,58 @@ int main(int argc, char *argv[]) {
 
       Mat locations;
       findNonZero(result >= templateMatchThreshold, locations);
+      cout << "locations.total()" << locations.total() << endl;
 
       for (int k = 0; k < locations.total(); ++k) {
+
         Point pt = locations.at<Point>(k);
         rectangle(
             baseImg, pt,
             Point(pt.x + number_template.cols, pt.y + number_template.rows),
             Scalar(0, 0, 255), 2);
+        putText(baseImg, number_templates[i].label,
+                Point(pt.x + number_template.cols, pt.y + 20),
+                FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0), 0.5);
+
+        unique_points.push_back(pt);
+      }
+    }
+    cout << "unique_points.size(): " << unique_points.size() << endl;
+    for (int k = 0; k < unique_points.size(); ++k) {
+      Point pt = unique_points[k];
+      bool is_unique = true;
+      for (int l = k + 1; l < unique_points.size(); ++l) {
+        Point pt2 = unique_points[l];
+        if (abs(pt.x - pt2.x) < min_distance_between_points &&
+            abs(pt.y - pt2.y) < min_distance_between_points) {
+          is_unique = false;
+          break;
+        }
+      }
+      if (is_unique) {
+        FoundNumber found_number;
+        found_number.value = number_templates[i].value;
+        found_number.location = pt;
+        found_number.distanceFromLeftTopCorner =
+            sqrt(pow(pt.x, 2) + pow(pt.y, 2));
+        found_numbers.push_back(found_number);
       }
     }
   }
+
+  sort(found_numbers.begin(), found_numbers.end(), compareDistances);
+  cout << "found_numbers.size(): " << found_numbers.size() << endl;
+
+  vector<vector<FoundNumber>> merged_found_numbers;
+  merged_found_numbers.push_back(vector<FoundNumber>{found_numbers[0]});
+
+  for (int i = 1; i < found_numbers.size(); i++) {
+    cout << "found number: " << found_numbers[i].value
+         << " at: " << found_numbers[i].location.x << " "
+         << found_numbers[i].location.y << endl
+         << "distance: " << found_numbers[i].distanceFromLeftTopCorner << endl;
+  }
+
   imshow("after match tempalte", baseImg);
 
   int k = waitKey(0);
