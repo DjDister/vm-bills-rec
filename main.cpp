@@ -79,9 +79,27 @@ struct FoundNumber {
   float distanceFromLeftTopCorner;
 };
 
+struct FoundBanknote {
+  int value;
+  string label;
+  vector<FoundNumber> digits;
+};
+
 bool compareDistances(FoundNumber a, FoundNumber b) {
   return a.distanceFromLeftTopCorner < b.distanceFromLeftTopCorner;
 };
+
+struct CalculatedDistance {
+  int xDistance;
+  int yDistance;
+};
+
+CalculatedDistance calculateDistance(Point a, Point b) {
+  CalculatedDistance distance;
+  distance.xDistance = abs(a.x - b.x);
+  distance.yDistance = abs(a.y - b.y);
+  return distance;
+}
 
 vector<Template> number_templates = vector<Template>{
     {0, "zero", {"0_template1.png", "0_template2.png", "0_template3.png"}},
@@ -155,30 +173,20 @@ int main(int argc, char *argv[]) {
 
       // bitwise_not(number_template, number_template);
 
-      imshow("number template", number_template);
-
       Mat result;
       matchTemplate(processed_img, number_template, result, TM_CCOEFF_NORMED);
 
       Mat locations;
       findNonZero(result >= templateMatchThreshold, locations);
-      cout << "locations.total()" << locations.total() << endl;
+      // cout << "locations.total()" << locations.total() << endl;
 
       for (int k = 0; k < locations.total(); ++k) {
 
         Point pt = locations.at<Point>(k);
-        rectangle(
-            baseImg, pt,
-            Point(pt.x + number_template.cols, pt.y + number_template.rows),
-            Scalar(0, 0, 255), 2);
-        putText(baseImg, number_templates[i].label,
-                Point(pt.x + number_template.cols, pt.y + 20),
-                FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0), 0.5);
-
         unique_points.push_back(pt);
       }
     }
-    cout << "unique_points.size(): " << unique_points.size() << endl;
+    // cout << "unique_points.size(): " << unique_points.size() << endl;
     for (int k = 0; k < unique_points.size(); ++k) {
       Point pt = unique_points[k];
       bool is_unique = true;
@@ -197,6 +205,10 @@ int main(int argc, char *argv[]) {
         found_number.distanceFromLeftTopCorner =
             sqrt(pow(pt.x, 2) + pow(pt.y, 2));
         found_numbers.push_back(found_number);
+        rectangle(baseImg, pt, Point(pt.x + 30, pt.y + 40), Scalar(0, 0, 255),
+                  2);
+        putText(baseImg, number_templates[i].label, Point(pt.x + 60, pt.y + 20),
+                FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0), 0.5);
       }
     }
   }
@@ -206,12 +218,51 @@ int main(int argc, char *argv[]) {
 
   vector<vector<FoundNumber>> merged_found_numbers;
   merged_found_numbers.push_back(vector<FoundNumber>{found_numbers[0]});
+  int i = 1;
+  for (i; i < found_numbers.size(); i++) {
+    // cout << "found number: " << found_numbers[i].value
+    //      << " at: " << found_numbers[i].location.x << " "
+    //      << found_numbers[i].location.y << endl
+    //      << "distance: " << found_numbers[i].distanceFromLeftTopCorner <<
+    //      endl;
+    // cout << "i: " << i << endl;
+    // cout << "found number: " << found_numbers[i].value << endl;
+    bool isMerged = false;
+    for (int j = 0; j < merged_found_numbers.size(); j++) {
+      int sizeBefore = merged_found_numbers[j].size();
+      int k = 0;
+      for (k; k < merged_found_numbers[j].size(); k++) {
+        // cout << "merged_found_numbers[j][k].value"
+        //      << merged_found_numbers[j][k].value << endl;
+        CalculatedDistance distance = calculateDistance(
+            found_numbers[i].location, merged_found_numbers[j][k].location);
+        if (distance.xDistance < distanceBetweenNumbersToMerge &&
+            distance.yDistance < distanceBetweenNumbersToMerge) {
+          merged_found_numbers[j].push_back(found_numbers[i]);
+          // cout << "found number: " << found_numbers[i].value
+          //      << " merged with: " << merged_found_numbers[j][k].value <<
+          //      endl;
+          isMerged = true;
+          break;
+        }
+      }
+    }
+    if (!isMerged) {
+      merged_found_numbers.push_back(vector<FoundNumber>{found_numbers[i]});
+      // cout << "found number: " << found_numbers[i].value
+      //      << " added to new group" << endl;
+    }
+  }
 
-  for (int i = 1; i < found_numbers.size(); i++) {
-    cout << "found number: " << found_numbers[i].value
-         << " at: " << found_numbers[i].location.x << " "
-         << found_numbers[i].location.y << endl
-         << "distance: " << found_numbers[i].distanceFromLeftTopCorner << endl;
+  vector<string> merged_found_numbers_labels;
+
+  for (int i = 0; i < merged_found_numbers.size(); ++i) {
+    string label = "";
+    for (int j = 0; j < merged_found_numbers[i].size(); ++j) {
+      label += to_string(merged_found_numbers[i][j].value);
+    }
+    merged_found_numbers_labels.push_back(label);
+    cout << "merged found number: " << label << endl;
   }
 
   imshow("after match tempalte", baseImg);
