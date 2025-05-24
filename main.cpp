@@ -115,7 +115,7 @@ int distanceBetweenNumbersToMerge = 50;
 int main(int argc, char *argv[]) {
   cout << "Hello, World!" << endl;
 
-  string image_path = samples::findFile("./assets/images/480pln.jpg");
+  string image_path = samples::findFile("./assets/images/380pln.jpg");
   Mat img = imread(image_path, IMREAD_COLOR);
 
   pyrDown(img, img);
