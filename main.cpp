@@ -9,64 +9,6 @@
 using namespace cv;
 using namespace std;
 
-void testAdaptiveThreshold(Mat gray) {
-  Mat processed_gray;
-  for (int block_size = 3; block_size <= 55; block_size += 2) {
-    for (int c_value = -30; c_value <= 30; c_value += 5) {
-      gray.copyTo(processed_gray);
-      adaptiveThreshold(processed_gray, processed_gray, 255,
-                        ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, block_size,
-                        c_value);
-
-      string window_name =
-          "BlockSize=" + to_string(block_size) + " C=" + to_string(c_value);
-      imshow(window_name, processed_gray);
-      cout << window_name << endl;
-      int k = waitKey(0);
-      if (k == 27) {
-        destroyAllWindows();
-
-        return;
-      }
-      destroyWindow(window_name);
-    }
-  }
-}
-
-void testMorphology(Mat base_img) {
-  Mat current_img;
-  for (int open_k_size = 1; open_k_size <= 7; ++open_k_size) {
-    for (int close_k_size = 1; close_k_size <= 7; ++close_k_size) {
-      if (open_k_size == 0 || close_k_size == 0)
-        continue;
-
-      base_img.copyTo(current_img);
-
-      Mat open_kernel =
-          getStructuringElement(MORPH_RECT, Size(open_k_size, open_k_size));
-      morphologyEx(current_img, current_img, MORPH_OPEN, open_kernel);
-
-      Mat close_kernel =
-          getStructuringElement(MORPH_RECT, Size(close_k_size, close_k_size));
-      morphologyEx(current_img, current_img, MORPH_CLOSE, close_kernel);
-
-      string window_name = "OpenKernel: " + to_string(open_k_size) + "x" +
-                           to_string(open_k_size) +
-                           " CloseKernel: " + to_string(close_k_size) + "x" +
-                           to_string(close_k_size);
-      imshow(window_name, current_img);
-
-      int k = waitKey(0);
-      if (k == 27) { // ESC
-        destroyAllWindows();
-
-        return;
-      }
-      destroyWindow(window_name);
-    }
-  }
-}
-
 struct Template {
   int value;
   string label;
@@ -101,19 +43,33 @@ CalculatedDistance calculateDistance(Point a, Point b) {
   return distance;
 }
 
-vector<Template> number_templates = vector<Template>{
-    {0, "zero", {"0_template1.png", "0_template2.png", "0_template3.png"}},
-    {1, "one", {"1_template1.png"}},
-    {2, "two", {"2_template1.png", "2_template2.png"}},
+vector<Template> number_templates =
+    vector<Template>{{0,
+                      "zero",
+                      {"0_template1.png", "0_template2.png", "0_template3.png",
+                       "0_template4.png"}},
 
-    {5, "one", {"5_template1.png"}},
-};
+                     {1, "one", {"1_template1.png", "1_template2.png"}},
+                     {2,
+                      "two",
+                      {
+                          "2_template1.png",
+                          "2_template2.png",
+                      }},
+                     {5,
+                      "five",
+                      {
+                          "5_template1.png",
+                      }}};
 
-float templateMatchThreshold = 0.74;
+float templateMatchThreshold = 0.77;
 int distanceBetweenNumbersToMerge = 50;
 
 int main(int argc, char *argv[]) {
   cout << "Hello, World!" << endl;
+
+  vector<int> rotation_angles = {-10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
+                                 1,   2,  3,  4,  5,  6,  7,  8,  9,  10};
 
   string image_path = samples::findFile("./assets/images/380pln.jpg");
   Mat img = imread(image_path, IMREAD_COLOR);
@@ -159,8 +115,27 @@ int main(int argc, char *argv[]) {
     vector<Point> unique_points;
 
     int min_distance_between_points = 10;
+    vector<string> rotatedFiles;
+    for (int j = 0; j < number_templates[i].fileNames.size(); ++j) {
+      cout << "Processing template: " << number_templates[i].fileNames[j]
+           << endl;
+
+      for (int k = 0; k < rotation_angles.size(); k++) {
+        string nameDuplicate = number_templates[i].fileNames[j].substr(
+            0, number_templates[i].fileNames[j].length() - 4);
+        rotatedFiles.push_back(nameDuplicate.erase(nameDuplicate.length(), 4) +
+                               "_rot_" + to_string(rotation_angles[k]) +
+                               ".png");
+      }
+    }
+    number_templates[i].fileNames.insert(number_templates[i].fileNames.end(),
+                                         rotatedFiles.begin(),
+                                         rotatedFiles.end());
 
     for (int j = 0; j < number_templates[i].fileNames.size(); ++j) {
+      cout << "Processing template: " << number_templates[i].fileNames[j]
+           << endl;
+
       string template_path = samples::findFile(
           "./assets/images/templates/" + to_string(number_templates[i].value) +
           "/" + number_templates[i].fileNames[j]);
@@ -170,8 +145,6 @@ int main(int argc, char *argv[]) {
         cout << "failed to load img: " << template_path << endl;
         return 1;
       }
-
-      // bitwise_not(number_template, number_template);
 
       Mat result;
       matchTemplate(processed_img, number_template, result, TM_CCOEFF_NORMED);
@@ -255,6 +228,7 @@ int main(int argc, char *argv[]) {
   }
 
   vector<string> merged_found_numbers_labels;
+  int totalValue = 0;
 
   for (int i = 0; i < merged_found_numbers.size(); ++i) {
     string label = "";
@@ -262,11 +236,12 @@ int main(int argc, char *argv[]) {
       label += to_string(merged_found_numbers[i][j].value);
     }
     merged_found_numbers_labels.push_back(label);
+    totalValue = totalValue + stoi(label);
     cout << "merged found number: " << label << endl;
   }
 
   imshow("after match tempalte", baseImg);
-
+  cout << "Total value: " << totalValue << endl;
   int k = waitKey(0);
   return 0;
 }
