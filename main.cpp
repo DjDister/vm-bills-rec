@@ -21,12 +21,6 @@ struct FoundNumber {
   float distanceFromLeftTopCorner;
 };
 
-struct FoundBanknote {
-  int value;
-  string label;
-  vector<FoundNumber> digits;
-};
-
 bool compareDistances(FoundNumber a, FoundNumber b) {
   return a.distanceFromLeftTopCorner < b.distanceFromLeftTopCorner;
 };
@@ -115,13 +109,13 @@ vector<Template> number_templates =
 
 float templateMatchThreshold = 0.70f;
 int distanceBetweenNumbersToMerge = 50;
+vector<int> rotation_angles = {-10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
+                               1,   2,  3,  4,  5,  6,  7,  8,  9,  10};
 
 int main(int argc, char *argv[]) {
   cout << "Hello, World!" << endl;
 
   int totalValue = 0;
-  vector<int> rotation_angles = {-10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
-                                 1,   2,  3,  4,  5,  6,  7,  8,  9,  10};
 
   string image_path = samples::findFile("./assets/images/380pln.jpg");
   Mat img = imread(image_path, IMREAD_COLOR);
@@ -253,28 +247,19 @@ int main(int argc, char *argv[]) {
   merged_found_numbers.push_back(vector<FoundNumber>{found_numbers[0]});
   int i = 1;
   for (i; i < found_numbers.size(); i++) {
-    // cout << "found number: " << found_numbers[i].value
-    //      << " at: " << found_numbers[i].location.x << " "
-    //      << found_numbers[i].location.y << endl
-    //      << "distance: " << found_numbers[i].distanceFromLeftTopCorner <<
-    //      endl;
-    // cout << "i: " << i << endl;
-    // cout << "found number: " << found_numbers[i].value << endl;
+
     bool isMerged = false;
     for (int j = 0; j < merged_found_numbers.size(); j++) {
       int sizeBefore = merged_found_numbers[j].size();
       int k = 0;
       for (k; k < merged_found_numbers[j].size(); k++) {
-        // cout << "merged_found_numbers[j][k].value"
-        //      << merged_found_numbers[j][k].value << endl;
         CalculatedDistance distance = calculateDistance(
             found_numbers[i].location, merged_found_numbers[j][k].location);
+
         if (distance.xDistance < distanceBetweenNumbersToMerge &&
             distance.yDistance < distanceBetweenNumbersToMerge) {
           merged_found_numbers[j].push_back(found_numbers[i]);
-          // cout << "found number: " << found_numbers[i].value
-          //      << " merged with: " << merged_found_numbers[j][k].value <<
-          //      endl;
+
           isMerged = true;
           break;
         }
@@ -282,8 +267,6 @@ int main(int argc, char *argv[]) {
     }
     if (!isMerged) {
       merged_found_numbers.push_back(vector<FoundNumber>{found_numbers[i]});
-      // cout << "found number: " << found_numbers[i].value
-      //      << " added to new group" << endl;
     }
   }
 
