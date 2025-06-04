@@ -70,7 +70,7 @@ generateRotatedVersionsForFile(const string &originalFullFilePath,
 
   string directoryPath;
   string fileNameWithExt;
-  size_t lastSeparator = originalFullFilePath.find_last_of("/\\");
+  int lastSeparator = originalFullFilePath.find_last_of("/\\");
 
   if (lastSeparator != string::npos) {
     directoryPath = originalFullFilePath.substr(0, lastSeparator + 1);
@@ -87,7 +87,7 @@ generateRotatedVersionsForFile(const string &originalFullFilePath,
     return newGeneratedFileNames;
   }
 
-  for (size_t angle_idx = 0; angle_idx < anglesToRotate.size(); ++angle_idx) {
+  for (int angle_idx = 0; angle_idx < anglesToRotate.size(); ++angle_idx) {
     int angle = anglesToRotate[angle_idx];
     if (angle == 0) {
       continue;
@@ -95,18 +95,17 @@ generateRotatedVersionsForFile(const string &originalFullFilePath,
 
     Mat rotatedImage;
     Point2f center((originalImage.cols) / 2.0f, (originalImage.rows) / 2.0f);
-    Mat rotationMatrix =
-        getRotationMatrix2D(center, static_cast<double>(angle), 1.0);
+    Mat rotationMatrix = getRotationMatrix2D(center, angle, 1.0);
 
     Rect2f boundingBox =
-        RotatedRect(Point2f(), originalImage.size(), (angle)).boundingRect2f();
+        RotatedRect(Point2f(), originalImage.size(), angle).boundingRect2f();
     rotationMatrix.at<double>(0, 2) += boundingBox.width / 2.0 - center.x;
     rotationMatrix.at<double>(1, 2) += boundingBox.height / 2.0 - center.y;
 
     warpAffine(originalImage, rotatedImage, rotationMatrix, boundingBox.size(),
                INTER_LINEAR, BORDER_CONSTANT, Scalar(0));
 
-    size_t dotPosition = fileNameWithExt.find_last_of(".");
+    int dotPosition = fileNameWithExt.find_last_of(".");
     string nameWithoutExtension = fileNameWithExt;
     string fileExtension = "";
 

@@ -40,14 +40,14 @@ CalculatedDistance calculateDistance(Point a, Point b) {
 vector<Rect> drawBanknoteBox(Mat &baseImg, Mat &contoursImg) {
   adaptiveThreshold(contoursImg, contoursImg, 255, ADAPTIVE_THRESH_GAUSSIAN_C,
                     THRESH_BINARY, 13, 5);
-
+  imshow("Adaptive Threshold", contoursImg);
   Mat erozjaKernelKontury = getStructuringElement(MORPH_RECT, Size(6, 6));
   morphologyEx(contoursImg, contoursImg, MORPH_OPEN, erozjaKernelKontury);
-
+  imshow("Erozja", contoursImg);
   Mat dyltacjaKernelKontury = getStructuringElement(MORPH_RECT, Size(5, 5));
   morphologyEx(contoursImg, contoursImg, MORPH_CLOSE, dyltacjaKernelKontury);
   vector<vector<Point>> contours;
-
+  imshow("Dyltacja", contoursImg);
   findContours(contoursImg, contours, {}, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
 
   vector<Rect> boxesWithNumbers;
@@ -113,23 +113,18 @@ vector<int> rotation_angles = {-10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
                                1,   2,  3,  4,  5,  6,  7,  8,  9,  10};
 
 int main(int argc, char *argv[]) {
-  cout << "Hello, World!" << endl;
-
   int totalValue = 0;
 
   string image_path = samples::findFile("./assets/images/380pln.jpg");
   Mat img = imread(image_path, IMREAD_COLOR);
 
   resize(img, img, Size(768, 1024));
+  imshow("Resize", img);
 
   Mat gray;
   cvtColor(img, gray, COLOR_BGR2GRAY);
   bitwise_not(gray, gray);
-
-  if (gray.empty()) {
-    cout << "failed to load img: " << image_path << endl;
-    return 1;
-  }
+  imshow("Gray", gray);
 
   Mat contoursImg = gray.clone();
   Mat baseImg = img.clone();
@@ -137,31 +132,28 @@ int main(int argc, char *argv[]) {
   vector<Rect> boxesWithNumbers = drawBanknoteBox(baseImg, contoursImg);
   Mat blackBaseImg = Mat::zeros(baseImg.size(), baseImg.type());
   for (int i = 0; i < boxesWithNumbers.size(); ++i) {
-
+    imshow("Box with number", baseImg(boxesWithNumbers[i]));
     baseImg(boxesWithNumbers[i]).copyTo(blackBaseImg(boxesWithNumbers[i]));
   }
-  // imshow("Blacked Out Base Image", blackBaseImg);
+  imshow("BlackImg with boxes", blackBaseImg);
 
   Mat gray_black = blackBaseImg.clone();
   cvtColor(gray_black, gray_black, COLOR_BGR2GRAY);
+  imshow("Gray Black", gray_black);
 
   adaptiveThreshold(gray_black, gray_black, 255, ADAPTIVE_THRESH_GAUSSIAN_C,
                     THRESH_BINARY, 41, 5);
-  // imshow("Adaptive Threshold", gray_black);
-
-  Mat processed_img2;
-  gray_black.copyTo(processed_img2);
+  imshow("Adaptive Threshold na img z boxami", gray_black);
 
   Mat erozja_kernel2 = getStructuringElement(MORPH_RECT, Size(4, 4));
-  morphologyEx(processed_img2, processed_img2, MORPH_OPEN, erozja_kernel2);
-  // imshow("Erozja", processed_img2);
+  morphologyEx(gray_black, gray_black, MORPH_OPEN, erozja_kernel2);
+  imshow("Erozja na img z boxami", gray_black);
   Mat dylatacj_kernel2 = getStructuringElement(MORPH_RECT, Size(4, 4));
-  morphologyEx(processed_img2, processed_img2, MORPH_CLOSE, dylatacj_kernel2);
+  morphologyEx(gray_black, gray_black, MORPH_CLOSE, dylatacj_kernel2);
 
-  // imshow("Erozja->dilate z wykorzystaniem wlasnego elementu strukturalnego",
-  //        processed_img2);
-  bitwise_not(processed_img2, processed_img2);
-  // imshow("Bitwise Not", processed_img2);
+  imshow("dylatacja na img z boxami", gray_black);
+  bitwise_not(gray_black, gray_black);
+  imshow("Bitwise Not", gray_black);
   vector<FoundNumber> found_numbers;
 
   for (int i = 0; i < number_templates.size(); ++i) {
@@ -201,7 +193,7 @@ int main(int argc, char *argv[]) {
       }
 
       Mat result;
-      matchTemplate(processed_img2, number_template, result, TM_CCOEFF_NORMED);
+      matchTemplate(gray_black, number_template, result, TM_CCOEFF_NORMED);
 
       Mat locations;
       findNonZero(result >= templateMatchThreshold, locations);
