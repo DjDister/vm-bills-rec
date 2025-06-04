@@ -48,7 +48,7 @@ vector<Rect> drawBanknoteBox(Mat &baseImg, Mat &contoursImg) {
   morphologyEx(contoursImg, contoursImg, MORPH_CLOSE, dyltacjaKernelKontury);
   vector<vector<Point>> contours;
   imshow("Dyltacja", contoursImg);
-  findContours(contoursImg, contours, {}, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+  findContours(contoursImg, contours, {}, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
   vector<Rect> boxesWithNumbers;
 
@@ -115,7 +115,7 @@ vector<int> rotation_angles = {-10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
 int main(int argc, char *argv[]) {
   int totalValue = 0;
 
-  string image_path = samples::findFile("./assets/images/380pln.jpg");
+  string image_path = samples::findFile("./assets/images/280pln.jpg");
   Mat img = imread(image_path, IMREAD_COLOR);
 
   resize(img, img, Size(768, 1024));
